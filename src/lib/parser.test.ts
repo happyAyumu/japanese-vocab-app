@@ -4,6 +4,7 @@ import { parseVocabText } from "./parser";
 const FULL_SAMPLE = `【単語】瓦解（読み方：がかい）
 ■ 意味：物事が根底から崩れ壊れること
 ■ 語感・使う場面：組織や体制が崩壊する場面で使う硬い書き言葉
+■ 例文：長年の信頼関係が一瞬で瓦解した。
 
 ▼ 類義語（2つ）
  1. 崩壊 ┈ 違い：より一般的で日常語としても使われる
@@ -26,6 +27,7 @@ describe("parseVocabText", () => {
     expect(result.word.kanji).toBe("瓦解");
     expect(result.word.reading).toBe("がかい");
     expect(result.word.meaning).toBe("物事が根底から崩れ壊れること");
+    expect(result.word.example).toBe("長年の信頼関係が一瞬で瓦解した。");
     expect(result.word.synonyms).toEqual([
       { word: "崩壊", nuance: "より一般的で日常語としても使われる" },
       { word: "破綻", nuance: "経済的・財政的な文脈で使われやすい" },
@@ -76,5 +78,16 @@ describe("parseVocabText", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("expected failure result");
     expect(result.missingFields).toContain("類義語");
+  });
+
+  it("reports a missing example field", () => {
+    const broken = FULL_SAMPLE.replace(
+      "■ 例文：長年の信頼関係が一瞬で瓦解した。\n",
+      "",
+    );
+    const result = parseVocabText(broken);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected failure result");
+    expect(result.missingFields).toContain("例文");
   });
 });

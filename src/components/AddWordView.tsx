@@ -13,6 +13,7 @@ const EMPTY_ANTONYM: Antonym = { word: "", example: "" };
 const FORMAT_TEMPLATE = `【単語】〇〇（読み方：〇〇）
 ■ 意味：〇〇
 ■ 語感・使う場面：〇〇
+■ 例文：〇〇
 
 ▼ 類義語（2つ）
  1. 〇〇 ┈ 違い：〇〇
@@ -29,6 +30,7 @@ const FORMAT_TEMPLATE = `【単語】〇〇（読み方：〇〇）
 const SAMPLE_TEXT = `【単語】飄々（読み方：ひょうひょう）
 ■ 意味：世間の評価や周囲の状況に動じず、気負わずつかみどころのない様子
 ■ 語感・使う場面：人の性格や態度を表す際に使う、やや肯定的で飄逸なニュアンスを持つ書き言葉
+■ 例文：彼はどんな状況でも飄々としている。
 
 ▼ 類義語（2つ）
  1. 超然 ┈ 違い：物事に動じない点は似ているが、「飄々」より重々しく気高い響きがある
@@ -59,15 +61,16 @@ export function AddWordView({ onAdd }: Props) {
     setKanji(result.word.kanji ?? "");
     setReading(result.word.reading ?? "");
     setMeaning(result.word.meaning ?? "");
+    if (result.word.example) {
+      setExample(result.word.example);
+    }
     if (result.word.synonyms && result.word.synonyms.length > 0) {
       setSynonyms(result.word.synonyms);
     }
     if (result.word.antonyms) {
       setAntonyms(result.word.antonyms);
     }
-    const fields = result.ok ? [] : [...result.missingFields];
-    if (!example.trim()) fields.push("例文（フォーマットに含まれないため手動で入力してください）");
-    setMissingFields(fields);
+    setMissingFields(result.ok ? [] : result.missingFields);
     setSavedMessage("");
   }
 
@@ -125,7 +128,7 @@ export function AddWordView({ onAdd }: Props) {
               下記のテンプレート通りにテキストを用意して貼り付けると、自動的に各項目へ分解されます。
               類義語・対義語はそれぞれ2つまで対応していますが、1つだけでも登録できます。
               <br />
-              ※「例文」欄（カード自体の例文）はこのフォーマットに含まれないため、貼り付け後に手動で1文入力してください。
+              「■ 例文：」の行に単語自体の例文を入れておくと、そこも自動で反映されます（省略した場合は解析後に手動で入力してください）。
             </p>
             <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-washi-bg p-2 text-xs text-sumi-ink dark:bg-washi-bgDark dark:text-sumi-inkDark">
               {FORMAT_TEMPLATE}

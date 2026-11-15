@@ -5,6 +5,7 @@ export type ParsedWord = {
   reading: string;
   meaning: string;
   nuance: string; // 語感・使う場面（参考情報として保持。カード自体には必須項目ではない）
+  example: string; // カード自体の例文（■ 例文：〇〇 の行から読み取る）
   synonyms: Synonym[];
   antonyms: Antonym[];
 };
@@ -19,6 +20,7 @@ export type ParseResult =
  * 【単語】〇〇（読み方：〇〇）
  * ■ 意味：〇〇
  * ■ 語感・使う場面：〇〇
+ * ■ 例文：〇〇
  *
  * ▼ 類義語（2つ）
  *  1. 〇〇 ┈ 違い：〇〇
@@ -51,6 +53,10 @@ export function parseVocabText(raw: string): ParseResult {
   const nuanceMatch = text.match(/■\s*語感[・･]使う場面[:：]\s*(.+)/);
   const nuance = nuanceMatch?.[1]?.trim() ?? "";
 
+  const exampleMatch = text.match(/■\s*例文[:：]\s*(.+)/);
+  const example = exampleMatch?.[1]?.trim();
+  if (!example) missingFields.push("例文");
+
   const synonyms = parseSynonymBlock(text);
   if (synonyms.length === 0) missingFields.push("類義語");
 
@@ -62,6 +68,7 @@ export function parseVocabText(raw: string): ParseResult {
     reading,
     meaning,
     nuance,
+    example,
     synonyms,
     antonyms,
   };
@@ -77,6 +84,7 @@ export function parseVocabText(raw: string): ParseResult {
       reading: reading!,
       meaning: meaning!,
       nuance,
+      example: example!,
       synonyms,
       antonyms,
     },
