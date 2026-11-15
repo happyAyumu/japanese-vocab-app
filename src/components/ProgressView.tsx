@@ -4,7 +4,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -74,31 +73,41 @@ export function ProgressView({ cards }: Props) {
         <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
           レベル別の割合
         </h2>
-        <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={buckets}
-                dataKey="count"
-                nameKey="label"
-                innerRadius={50}
-                outerRadius={90}
-                paddingAngle={2}
-              >
-                {buckets.map((bucket) => (
-                  <Cell key={bucket.label} fill={bucket.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend
-                formatter={(value, _entry, index) => {
-                  const bucket = buckets[index];
-                  return `${value}（${bucket?.count ?? 0}語）`;
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+        <div className="flex justify-center">
+          <PieChart width={240} height={220}>
+            <Pie
+              data={buckets}
+              dataKey="count"
+              nameKey="label"
+              cx="50%"
+              cy="50%"
+              innerRadius={55}
+              outerRadius={85}
+              paddingAngle={2}
+              isAnimationActive={false}
+            >
+              {buckets.map((bucket) => (
+                <Cell key={bucket.label} fill={bucket.color} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
         </div>
+        <ul className="mt-3 flex flex-col gap-1.5">
+          {buckets.map((bucket) => (
+            <li
+              key={bucket.label}
+              className="flex items-center gap-2 text-sm text-sumi-ink dark:text-sumi-inkDark"
+            >
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: bucket.color }}
+              />
+              <span>{bucket.label}</span>
+              <span className="text-sumi-sub dark:text-sumi-subDark">（{bucket.count}語）</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div>
