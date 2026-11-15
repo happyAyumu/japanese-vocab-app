@@ -1,4 +1,4 @@
-import type { VocabCard } from "../types/vocab";
+import type { Grade, VocabCard } from "../types/vocab";
 
 /**
  * srsLevel と次回復習までの間隔（日数）の対応表。
@@ -68,6 +68,65 @@ export function applyAnswer(
   return correct
     ? applyCorrectAnswer(card, date)
     : applyIncorrectAnswer(card, date);
+}
+
+/**
+ * フラッシュカード復習時の4段階評価（もう一度／難しい／普通／簡単）。
+ * エビングハウスの忘却曲線に基づき、間隔を指数的に延ばしていく一方、
+ * 自己評価の難易度に応じて間隔を伸縮させる（SM-2系アルゴリズムの考え方）。
+ *
+ * - もう一度 (again): 覚えていなかった。レベルを0に戻し、即日（このセッション内）に再出題する。
+ * - 難しい   (hard):  レベルは上げず、現在レベルの間隔よりやや長め（×1.2）で再出題する。
+ * - 普通     (good):  レベルを+1し、通常の間隔表に従って次回を設定する。
+ * - 簡単     (easy):  レベルを+2し、通常より長め（×1.3）の間隔で次回を設定する。
+ */
+export function applyGrade(
+  card: VocabCard,
+  grade: Grade,
+  date: string = todayISO(),
+): VocabCard {
+  const history = [...card.history, { date, correct: grade !== "again", grade }];
+
+  switch (grade) {
+    case "again":
+      return { ...card, srsLevel: 0, nextReviewAt: date, history };
+    case "hard": {
+      const days = Math.max(1, Math.round(intervalDaysForLevel(card.srsLevel) * 1.2));
+      return { ...card, srsLevel: card.srsLevel, nextReviewAt: addDays(date, days), history };
+    }
+    case "good": {
+      const nextLevel = card.srsLevel + 1;
+      return {
+        ...card,
+        srsLevel: nextLevel,
+        nextReviewAt: addDays(date, intervalDaysForLevel(nextLevel)),
+        history,
+      };
+    }
+    case "easy": {
+      const nextLevel = card.srsLevel + 2;
+      const days = Math.round(intervalDaysForLevel(nextLevel) * 1.3);
+      return { ...card, srsLevel: nextLevel, nextReviewAt: addDays(date, days), history };
+    }
+  }
+}
+
+/** 4段階評価ボタンに表示する「次回までの日数」プレビュー */
+export function previewGradeIntervals(card: VocabCard): Record<Grade, number> {
+  return {
+    again: 0,
+    hard: Math.max(1, Math.round(intervalDaysForLevel(card.srsLevel) * 1.2)),
+    good: intervalDaysForLevel(card.srsLevel + 1),
+    easy: Math.round(intervalDaysForLevel(card.srsLevel + 2) * 1.3),
+  };
+}
+
+export function formatIntervalLabel(days: number): string {
+  if (days <= 0) return "今日中";
+  if (days === 1) return "1日後";
+  if (days < 30) return `${days}日後`;
+  if (days < 365) return `${Math.round(days / 30)}ヶ月後`;
+  return `${Math.round(days / 365)}年後`;
 }
 
 /** 今日以前が復習日になっているカードだけを抽出する（今日の復習ビュー） */

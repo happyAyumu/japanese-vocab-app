@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { SortMode, VocabCard } from "../types/vocab";
+import type { Grade, SortMode, VocabCard } from "../types/vocab";
 import { Flashcard } from "./Flashcard";
-import { sortByWeakness } from "../lib/srs";
+import { formatIntervalLabel, previewGradeIntervals, sortByWeakness } from "../lib/srs";
 
 type FilterMode = "all" | "dueToday" | "weak";
 
@@ -9,10 +9,10 @@ type Props = {
   cards: VocabCard[];
   dueCardIds: Set<string>;
   sortMode: SortMode;
-  onAnswer: (id: string, correct: boolean) => void;
+  onGrade: (id: string, grade: Grade) => void;
 };
 
-export function DeckView({ cards, dueCardIds, sortMode, onAnswer }: Props) {
+export function DeckView({ cards, dueCardIds, sortMode, onGrade }: Props) {
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [idx, setIdx] = useState(0);
@@ -61,11 +61,13 @@ export function DeckView({ cards, dueCardIds, sortMode, onAnswer }: Props) {
     setIdx((i) => (i + delta + shuffled.length) % shuffled.length);
   }
 
-  function handleAnswer(correct: boolean) {
+  function handleGrade(grade: Grade) {
     if (!current) return;
-    onAnswer(current.id, correct);
+    onGrade(current.id, grade);
     go(1);
   }
+
+  const preview = current ? previewGradeIntervals(current) : null;
 
   return (
     <div className="flex flex-col items-center">
@@ -117,25 +119,66 @@ export function DeckView({ cards, dueCardIds, sortMode, onAnswer }: Props) {
         </div>
       )}
 
-      <div className="mt-5 flex items-center gap-4">
+      <div className="mt-5 flex w-full max-w-md items-center justify-center gap-2">
         <NavButton onClick={() => go(-1)}>←</NavButton>
-        <button
-          className="rounded-full border border-weak px-4 py-3 text-sm font-semibold text-weak transition active:scale-95"
-          onClick={() => handleAnswer(false)}
+        <GradeButton
+          colorClass="border-weak text-weak"
+          label="もう一度"
+          interval={preview ? formatIntervalLabel(preview.again) : ""}
+          onClick={() => handleGrade("again")}
           disabled={!current}
-        >
-          わからない
-        </button>
-        <button
-          className="rounded-full border border-good px-4 py-3 text-sm font-semibold text-good transition active:scale-95"
-          onClick={() => handleAnswer(true)}
+        />
+        <GradeButton
+          colorClass="border-hard text-hard"
+          label="難しい"
+          interval={preview ? formatIntervalLabel(preview.hard) : ""}
+          onClick={() => handleGrade("hard")}
           disabled={!current}
-        >
-          覚えた
-        </button>
+        />
+        <GradeButton
+          colorClass="border-good text-good"
+          label="普通"
+          interval={preview ? formatIntervalLabel(preview.good) : ""}
+          onClick={() => handleGrade("good")}
+          disabled={!current}
+        />
+        <GradeButton
+          colorClass="border-easy text-easy"
+          label="簡単"
+          interval={preview ? formatIntervalLabel(preview.easy) : ""}
+          onClick={() => handleGrade("easy")}
+          disabled={!current}
+        />
         <NavButton onClick={() => go(1)}>→</NavButton>
       </div>
     </div>
+  );
+}
+
+function GradeButton({
+  colorClass,
+  label,
+  interval,
+  onClick,
+  disabled,
+}: {
+  colorClass: string;
+  label: string;
+  interval: string;
+  onClick: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <button
+      className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${colorClass}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      <span className="text-[10px] font-normal text-sumi-sub dark:text-sumi-subDark">
+        {interval}
+      </span>
+      <span>{label}</span>
+    </button>
   );
 }
 

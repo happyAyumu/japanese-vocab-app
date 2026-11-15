@@ -3,6 +3,9 @@ import type { VocabCard } from "../types/vocab";
 import {
   applyCorrectAnswer,
   applyIncorrectAnswer,
+  applyGrade,
+  previewGradeIntervals,
+  formatIntervalLabel,
   intervalDaysForLevel,
   addDays,
   getDueCards,
@@ -109,5 +112,71 @@ describe("mastery", () => {
 
   it("masteryRate is 0 for an empty list", () => {
     expect(masteryRate([])).toBe(0);
+  });
+});
+
+describe("applyGrade", () => {
+  it("again resets level to 0 and schedules for the same day", () => {
+    const card = makeCard({ srsLevel: 3 });
+    const updated = applyGrade(card, "again", "2026-01-01");
+    expect(updated.srsLevel).toBe(0);
+    expect(updated.nextReviewAt).toBe("2026-01-01");
+    expect(updated.history).toEqual([
+      { date: "2026-01-01", correct: false, grade: "again" },
+    ]);
+  });
+
+  it("hard keeps the level unchanged but pushes the interval out slightly", () => {
+    const card = makeCard({ srsLevel: 2 }); // base interval 3 days
+    const updated = applyGrade(card, "hard", "2026-01-01");
+    expect(updated.srsLevel).toBe(2);
+    expect(updated.nextReviewAt).toBe(addDays("2026-01-01", 4)); // round(3 * 1.2)
+  });
+
+  it("good promotes the level by 1 using the standard interval table", () => {
+    const card = makeCard({ srsLevel: 2 });
+    const updated = applyGrade(card, "good", "2026-01-01");
+    expect(updated.srsLevel).toBe(3);
+    expect(updated.nextReviewAt).toBe(addDays("2026-01-01", intervalDaysForLevel(3)));
+  });
+
+  it("easy promotes the level by 2 with a longer interval than good", () => {
+    const card = makeCard({ srsLevel: 2 });
+    const goodUpdate = applyGrade(card, "good", "2026-01-01");
+    const easyUpdate = applyGrade(card, "easy", "2026-01-01");
+    expect(easyUpdate.srsLevel).toBe(4);
+    expect(easyUpdate.nextReviewAt >= goodUpdate.nextReviewAt).toBe(true);
+  });
+
+  it("ordering of next review dates is again <= hard <= good <= easy", () => {
+    const card = makeCard({ srsLevel: 2 });
+    const again = applyGrade(card, "again", "2026-01-01").nextReviewAt;
+    const hard = applyGrade(card, "hard", "2026-01-01").nextReviewAt;
+    const good = applyGrade(card, "good", "2026-01-01").nextReviewAt;
+    const easy = applyGrade(card, "easy", "2026-01-01").nextReviewAt;
+    expect(again <= hard).toBe(true);
+    expect(hard <= good).toBe(true);
+    expect(good <= easy).toBe(true);
+  });
+});
+
+describe("previewGradeIntervals", () => {
+  it("returns a preview matching what applyGrade would schedule", () => {
+    const card = makeCard({ srsLevel: 1 });
+    const preview = previewGradeIntervals(card);
+    expect(preview.again).toBe(0);
+    expect(addDays("2026-01-01", preview.good)).toBe(
+      applyGrade(card, "good", "2026-01-01").nextReviewAt,
+    );
+  });
+});
+
+describe("formatIntervalLabel", () => {
+  it("formats days into human-readable Japanese labels", () => {
+    expect(formatIntervalLabel(0)).toBe("今日中");
+    expect(formatIntervalLabel(1)).toBe("1日後");
+    expect(formatIntervalLabel(14)).toBe("14日後");
+    expect(formatIntervalLabel(30)).toBe("1ヶ月後");
+    expect(formatIntervalLabel(365)).toBe("1年後");
   });
 });

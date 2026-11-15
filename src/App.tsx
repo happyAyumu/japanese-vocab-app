@@ -20,7 +20,7 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const { cards, addCard, answerCard, replaceAll } = useVocabStore();
+  const { cards, addCard, answerCard, gradeCard, replaceAll } = useVocabStore();
   const { dueCards, mastery } = useSRS(cards);
   const { dark, toggleDark } = useDarkMode();
   const [tab, setTab] = useState<Tab>("deck");
@@ -43,7 +43,7 @@ export default function App() {
             cards={cards}
             dueCardIds={dueCardIds}
             sortMode={sortMode}
-            onAnswer={(id, correct) => answerCard(id, correct)}
+            onGrade={(id, grade) => gradeCard(id, grade)}
           />
         )}
         {tab === "quiz" && (

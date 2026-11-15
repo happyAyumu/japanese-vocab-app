@@ -26,6 +26,8 @@ export default {
         },
         good: "#4c7a4f",
         weak: "#b5502e",
+        hard: "#b98a3e",
+        easy: "#3b6e8f",
       },
       fontFamily: {
         sans: [

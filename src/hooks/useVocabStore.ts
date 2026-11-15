@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import type { VocabCard } from "../types/vocab";
+import type { Grade, VocabCard } from "../types/vocab";
 import { vocabRepository } from "../lib/repository";
-import { applyAnswer } from "../lib/srs";
+import { applyAnswer, applyGrade } from "../lib/srs";
 
 export function useVocabStore() {
   const [cards, setCards] = useState<VocabCard[]>(() => vocabRepository.load());
@@ -28,9 +28,15 @@ export function useVocabStore() {
     );
   }, []);
 
+  const gradeCard = useCallback((id: string, grade: Grade) => {
+    setCards((prev) =>
+      prev.map((c) => (c.id === id ? applyGrade(c, grade) : c)),
+    );
+  }, []);
+
   const replaceAll = useCallback((newCards: VocabCard[]) => {
     setCards(newCards);
   }, []);
 
-  return { cards, addCard, updateCard, removeCard, answerCard, replaceAll };
+  return { cards, addCard, updateCard, removeCard, answerCard, gradeCard, replaceAll };
 }
