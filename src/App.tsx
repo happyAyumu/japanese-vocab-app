@@ -29,7 +29,7 @@ export default function App() {
   const dueCardIds = new Set(dueCards.map((c) => c.id));
 
   return (
-    <div className="min-h-screen bg-washi-bg pb-24 text-sumi-ink dark:bg-washi-bgDark dark:text-sumi-inkDark">
+    <div className="min-h-screen bg-washi-bg pb-32 text-sumi-ink dark:bg-washi-bgDark dark:text-sumi-inkDark">
       <header className="flex flex-col items-center px-4 pb-4 pt-6">
         <h1 className="text-xl font-bold tracking-wide">日本語単語帳</h1>
         <p className="mt-1 text-xs text-sumi-sub dark:text-sumi-subDark">
@@ -49,6 +49,7 @@ export default function App() {
         {tab === "quiz" && (
           <QuizView
             cards={cards}
+            dueCards={dueCards}
             onFinish={(results) => {
               for (const r of results) {
                 if (!r.correct) {
@@ -72,12 +73,12 @@ export default function App() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 flex justify-around border-t border-washi-border bg-washi-card py-2 dark:border-washi-borderDark dark:bg-washi-cardDark">
+      <nav className="fixed bottom-0 left-0 right-0 flex h-24 items-center justify-around border-t border-washi-border bg-washi-card dark:border-washi-borderDark dark:bg-washi-cardDark">
         {TABS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex-1 rounded-lg py-2 text-xs font-medium transition ${
+            className={`flex h-full flex-1 items-center justify-center rounded-lg text-xs font-medium transition ${
               tab === key
                 ? "text-vermillion"
                 : "text-sumi-sub dark:text-sumi-subDark"

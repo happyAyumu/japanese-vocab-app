@@ -108,3 +108,42 @@ export function buildQuiz(
 
   return questions;
 }
+
+export type QuizCategory = "fourChoice" | "fillBlank";
+
+const FOUR_CHOICE_BUILDERS = [
+  (card: VocabCard, all: VocabCard[]) => buildSynAntQuestion(card, all),
+  (card: VocabCard, all: VocabCard[]) => buildMeaningQuestion(card, all),
+];
+
+/**
+ * 指定したカード群（通常は「今日復習すべきカード」）のうち、
+ * 選んだ出題カテゴリ（4択／穴埋め）で問題が成立するものだけを使って
+ * 1枚につき1問、全件分のクイズを組み立てる。
+ * 成立しないカード（例: 穴埋めで例文に単語が含まれない）は自動的にスキップされる。
+ */
+export function buildFilteredQuiz(
+  cards: VocabCard[],
+  allCards: VocabCard[],
+  category: QuizCategory,
+): QuizQuestion[] {
+  const shuffledCards = shuffle(cards);
+  const questions: QuizQuestion[] = [];
+
+  for (const card of shuffledCards) {
+    let question: QuizQuestion | null = null;
+
+    if (category === "fillBlank") {
+      question = buildFillBlankQuestion(card);
+    } else {
+      for (const build of shuffle(FOUR_CHOICE_BUILDERS)) {
+        question = build(card, allCards);
+        if (question) break;
+      }
+    }
+
+    if (question) questions.push(question);
+  }
+
+  return questions;
+}

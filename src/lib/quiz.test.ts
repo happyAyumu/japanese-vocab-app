@@ -5,6 +5,7 @@ import {
   buildMeaningQuestion,
   buildSynAntQuestion,
   buildQuiz,
+  buildFilteredQuiz,
 } from "./quiz";
 
 function makeCard(overrides: Partial<VocabCard>): VocabCard {
@@ -94,5 +95,36 @@ describe("buildQuiz", () => {
     for (const q of quiz) {
       expect(["fillBlank", "synAnt", "meaning"]).toContain(q.type);
     }
+  });
+});
+
+describe("buildFilteredQuiz", () => {
+  it("builds one fillBlank question per eligible card, skipping ones without a matching example", () => {
+    const withoutExample = makeCard({
+      id: "5",
+      kanji: "日和見",
+      reading: "ひよりみ",
+      meaning: "情勢を見て有利な方につくこと",
+      example: "全く別の文章です。",
+    });
+    const pool = [...deck, withoutExample];
+    const quiz = buildFilteredQuiz(pool, pool, "fillBlank");
+    expect(quiz.length).toBe(deck.length); // withoutExample is skipped
+    for (const q of quiz) {
+      expect(q.type).toBe("fillBlank");
+    }
+  });
+
+  it("builds one 4-choice question (synAnt or meaning) per eligible card", () => {
+    const quiz = buildFilteredQuiz(deck, deck, "fourChoice");
+    expect(quiz.length).toBe(deck.length);
+    for (const q of quiz) {
+      expect(["synAnt", "meaning"]).toContain(q.type);
+      expect(q.choices).toHaveLength(4);
+    }
+  });
+
+  it("returns an empty array when given no cards", () => {
+    expect(buildFilteredQuiz([], deck, "fourChoice")).toEqual([]);
   });
 });

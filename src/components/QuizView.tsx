@@ -1,14 +1,21 @@
 import { useMemo, useState } from "react";
 import type { QuizQuestion, QuizResult, VocabCard } from "../types/vocab";
-import { buildQuiz } from "../lib/quiz";
+import { buildFilteredQuiz, type QuizCategory } from "../lib/quiz";
 
 type Props = {
   cards: VocabCard[];
+  dueCards: VocabCard[];
   onFinish: (results: QuizResult[]) => void;
 };
 
-export function QuizView({ cards, onFinish }: Props) {
+const CATEGORY_LABEL: Record<QuizCategory, string> = {
+  fourChoice: "4択",
+  fillBlank: "穴埋め",
+};
+
+export function QuizView({ cards, dueCards, onFinish }: Props) {
   const [quiz, setQuiz] = useState<QuizQuestion[] | null>(null);
+  const [category, setCategory] = useState<QuizCategory | null>(null);
   const [qIdx, setQIdx] = useState(0);
   const [results, setResults] = useState<QuizResult[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -20,8 +27,9 @@ export function QuizView({ cards, onFinish }: Props) {
     return map;
   }, [cards]);
 
-  function startQuiz() {
-    const generated = buildQuiz(cards, cards, 5);
+  function startQuiz(selected: QuizCategory) {
+    const generated = buildFilteredQuiz(dueCards, cards, selected);
+    setCategory(selected);
     setQuiz(generated);
     setQIdx(0);
     setResults([]);
@@ -47,6 +55,7 @@ export function QuizView({ cards, onFinish }: Props) {
     if (qIdx + 1 >= quiz.length) {
       onFinish(results);
       setQuiz(null);
+      setCategory(null);
     } else {
       setQIdx((i) => i + 1);
     }
@@ -56,15 +65,36 @@ export function QuizView({ cards, onFinish }: Props) {
     return (
       <div className="flex flex-col items-center gap-4 p-8 text-center">
         <p className="text-sm text-sumi-sub dark:text-sumi-subDark">
-          5問区切りのクイズに挑戦しましょう。穴埋め・類義語対義語当て・意味当てからランダムに出題されます。
+          今日復習すべき単語を対象にクイズが出題されます。
         </p>
-        <button
-          className="rounded-full bg-vermillion px-6 py-3 text-sm font-semibold text-white transition active:scale-95"
-          onClick={startQuiz}
-          disabled={cards.length === 0}
-        >
-          クイズを始める
-        </button>
+
+        {dueCards.length === 0 ? (
+          <p className="text-sm font-semibold text-vermillion">
+            今日復習すべき単語はありません
+          </p>
+        ) : (
+          <p className="text-xs text-sumi-sub dark:text-sumi-subDark">
+            対象: {dueCards.length}語
+          </p>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            className="rounded-full bg-vermillion px-6 py-3 text-sm font-semibold text-white transition active:scale-95 disabled:opacity-40"
+            onClick={() => startQuiz("fourChoice")}
+            disabled={dueCards.length === 0}
+          >
+            4択
+          </button>
+          <button
+            className="rounded-full bg-vermillion px-6 py-3 text-sm font-semibold text-white transition active:scale-95 disabled:opacity-40"
+            onClick={() => startQuiz("fillBlank")}
+            disabled={dueCards.length === 0}
+          >
+            穴埋め
+          </button>
+        </div>
+
         {results.length > 0 && (
           <QuizSummary results={results} cardsById={cardsById} />
         )}
@@ -72,13 +102,34 @@ export function QuizView({ cards, onFinish }: Props) {
     );
   }
 
+  if (quiz.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-4 p-8 text-center">
+        <p className="text-sm text-sumi-sub dark:text-sumi-subDark">
+          {category && CATEGORY_LABEL[category]}形式で出題できる単語がありませんでした
+          （例文に単語が含まれない、または類義語・対義語が未設定の可能性があります）。
+        </p>
+        <button
+          className="rounded-full border border-washi-border bg-washi-card px-6 py-3 text-sm font-semibold text-sumi-ink active:scale-95 dark:border-washi-borderDark dark:bg-washi-cardDark dark:text-sumi-inkDark"
+          onClick={() => {
+            setQuiz(null);
+            setCategory(null);
+          }}
+        >
+          戻る
+        </button>
+      </div>
+    );
+  }
+
   const question = quiz[qIdx];
   const card = cardsById.get(question.cardId);
+  const remaining = quiz.length - qIdx;
 
   return (
     <div className="flex flex-col items-center gap-4 p-4">
       <div className="text-xs text-sumi-sub dark:text-sumi-subDark">
-        {qIdx + 1} / {quiz.length} 問
+        {qIdx + 1} / {quiz.length} 問　／　残り {remaining} 問
       </div>
       <div className="w-full max-w-md rounded-2xl border border-washi-border bg-washi-card p-6 dark:border-washi-borderDark dark:bg-washi-cardDark">
         <p className="mb-4 text-base leading-relaxed text-sumi-ink dark:text-sumi-inkDark">
