@@ -12,6 +12,8 @@ import {
   sortByWeakness,
   masteryRate,
   isMastered,
+  computeStreak,
+  levelDistribution,
 } from "./srs";
 
 function makeCard(overrides: Partial<VocabCard> = {}): VocabCard {
@@ -178,5 +180,69 @@ describe("formatIntervalLabel", () => {
     expect(formatIntervalLabel(14)).toBe("14日後");
     expect(formatIntervalLabel(30)).toBe("1ヶ月後");
     expect(formatIntervalLabel(365)).toBe("1年後");
+  });
+});
+
+describe("computeStreak", () => {
+  it("counts consecutive studied days ending today", () => {
+    const cards = [
+      makeCard({
+        history: [
+          { date: "2026-01-03", correct: true },
+          { date: "2026-01-04", correct: true },
+          { date: "2026-01-05", correct: true },
+        ],
+      }),
+    ];
+    expect(computeStreak(cards, "2026-01-05")).toBe(3);
+  });
+
+  it("does not break the streak if today has not been studied yet", () => {
+    const cards = [
+      makeCard({
+        history: [
+          { date: "2026-01-04", correct: true },
+          { date: "2026-01-05", correct: true },
+        ],
+      }),
+    ];
+    expect(computeStreak(cards, "2026-01-06")).toBe(2);
+  });
+
+  it("resets to 0 when there is a gap before today", () => {
+    const cards = [
+      makeCard({ history: [{ date: "2026-01-01", correct: true }] }),
+    ];
+    expect(computeStreak(cards, "2026-01-05")).toBe(0);
+  });
+
+  it("merges history across multiple cards for the same day", () => {
+    const cards = [
+      makeCard({ id: "a", history: [{ date: "2026-01-05", correct: true }] }),
+      makeCard({ id: "b", history: [{ date: "2026-01-04", correct: false }] }),
+    ];
+    expect(computeStreak(cards, "2026-01-05")).toBe(2);
+  });
+
+  it("returns 0 when there is no history at all", () => {
+    expect(computeStreak([makeCard({})], "2026-01-05")).toBe(0);
+  });
+});
+
+describe("levelDistribution", () => {
+  it("buckets cards into the 4 level groups", () => {
+    const cards = [
+      makeCard({ id: "a", srsLevel: -1 }),
+      makeCard({ id: "b", srsLevel: 0 }),
+      makeCard({ id: "c", srsLevel: 1 }),
+      makeCard({ id: "d", srsLevel: 2 }),
+      makeCard({ id: "e", srsLevel: 3 }),
+      makeCard({ id: "f", srsLevel: 4 }),
+      makeCard({ id: "g", srsLevel: 5 }),
+      makeCard({ id: "h", srsLevel: 10 }),
+    ];
+    const buckets = levelDistribution(cards);
+    expect(buckets.map((b) => b.count)).toEqual([2, 2, 2, 2]);
+    expect(buckets.reduce((sum, b) => sum + b.count, 0)).toBe(cards.length);
   });
 });

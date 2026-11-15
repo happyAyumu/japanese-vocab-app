@@ -3,13 +3,23 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { VocabCard } from "../types/vocab";
-import { MASTERY_LEVEL_THRESHOLD, isMastered, masteryRate, recentAccuracy } from "../lib/srs";
+import {
+  MASTERY_LEVEL_THRESHOLD,
+  computeStreak,
+  isMastered,
+  levelDistribution,
+  masteryRate,
+} from "../lib/srs";
 
 type Props = {
   cards: VocabCard[];
@@ -18,6 +28,8 @@ type Props = {
 export function ProgressView({ cards }: Props) {
   const rate = masteryRate(cards);
   const masteredCount = cards.filter(isMastered).length;
+  const streak = useMemo(() => computeStreak(cards), [cards]);
+  const buckets = useMemo(() => levelDistribution(cards), [cards]);
 
   const byDate = useMemo(() => {
     const counts = new Map<string, number>();
@@ -46,6 +58,49 @@ export function ProgressView({ cards }: Props) {
         </p>
       </div>
 
+      <div className="flex items-center gap-4 rounded-2xl border border-washi-border bg-washi-card p-5 dark:border-washi-borderDark dark:bg-washi-cardDark">
+        <div className="text-4xl">🔥</div>
+        <div>
+          <div className="text-2xl font-bold text-sumi-ink dark:text-sumi-inkDark">
+            {streak}日連続
+          </div>
+          <p className="text-xs text-sumi-sub dark:text-sumi-subDark">
+            フラッシュカードの評価、またはクイズの回答で記録されます
+          </p>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
+          レベル別の割合
+        </h2>
+        <div className="h-64 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={buckets}
+                dataKey="count"
+                nameKey="label"
+                innerRadius={50}
+                outerRadius={90}
+                paddingAngle={2}
+              >
+                {buckets.map((bucket) => (
+                  <Cell key={bucket.label} fill={bucket.color} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend
+                formatter={(value, _entry, index) => {
+                  const bucket = buckets[index];
+                  return `${value}（${bucket?.count ?? 0}語）`;
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       <div>
         <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
           追加日ごとの単語数
@@ -60,37 +115,6 @@ export function ProgressView({ cards }: Props) {
               <Bar dataKey="count" fill="#a8562f" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div>
-        <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
-          単語ごとの詳細
-        </h2>
-        <div className="flex flex-col gap-2">
-          {cards.map((c) => {
-            const accuracy = recentAccuracy(c);
-            return (
-              <div
-                key={c.id}
-                className="flex items-center justify-between rounded-lg border border-washi-border bg-washi-card px-4 py-2 dark:border-washi-borderDark dark:bg-washi-cardDark"
-              >
-                <div>
-                  <span className="font-semibold text-sumi-ink dark:text-sumi-inkDark">
-                    {c.kanji}
-                  </span>
-                  <span className="ml-2 text-xs text-sumi-sub dark:text-sumi-subDark">
-                    Lv.{c.srsLevel}
-                  </span>
-                </div>
-                <div className="text-xs text-sumi-sub dark:text-sumi-subDark">
-                  {accuracy === null ? "記録なし" : `${Math.round(accuracy * 100)}%`}
-                  {" ／ "}
-                  {c.history.length}回回答
-                </div>
-              </div>
-            );
-          })}
         </div>
       </div>
     </div>

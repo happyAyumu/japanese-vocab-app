@@ -78,7 +78,7 @@ export default function App() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`flex h-full flex-1 items-center justify-center rounded-lg text-xs font-medium transition ${
+            className={`flex h-full flex-1 items-center justify-center rounded-lg text-sm font-medium transition ${
               tab === key
                 ? "text-vermillion"
                 : "text-sumi-sub dark:text-sumi-subDark"

@@ -174,3 +174,50 @@ export function masteryRate(cards: VocabCard[]): number {
   if (cards.length === 0) return 0;
   return cards.filter(isMastered).length / cards.length;
 }
+
+/**
+ * 連続学習日数。フラッシュカードの評価・クイズの回答のどちらも
+ * 「その日学習した」とみなす（カードのhistoryに日付が記録されていれば学習済み）。
+ * 今日まだ学習していなくても、昨日までの連続記録は途切れていないものとして数える。
+ */
+export function computeStreak(cards: VocabCard[], today: string = todayISO()): number {
+  const studiedDates = new Set<string>();
+  for (const card of cards) {
+    for (const entry of card.history) {
+      studiedDates.add(entry.date);
+    }
+  }
+
+  let streak = 0;
+  let cursor = studiedDates.has(today) ? today : addDays(today, -1);
+  while (studiedDates.has(cursor)) {
+    streak++;
+    cursor = addDays(cursor, -1);
+  }
+  return streak;
+}
+
+export type LevelBucket = {
+  label: string;
+  count: number;
+  color: string;
+};
+
+/** srsLevelを4段階のバケツに分け、円グラフ表示用の件数を返す */
+export function levelDistribution(cards: VocabCard[]): LevelBucket[] {
+  const buckets: LevelBucket[] = [
+    { label: "未学習 (Lv0以下)", count: 0, color: "#b5502e" },
+    { label: "学習中 (Lv1-2)", count: 0, color: "#b98a3e" },
+    { label: "定着中 (Lv3-4)", count: 0, color: "#3b6e8f" },
+    { label: "習得 (Lv5+)", count: 0, color: "#4c7a4f" },
+  ];
+
+  for (const card of cards) {
+    if (card.srsLevel <= 0) buckets[0].count++;
+    else if (card.srsLevel <= 2) buckets[1].count++;
+    else if (card.srsLevel <= 4) buckets[2].count++;
+    else buckets[3].count++;
+  }
+
+  return buckets;
+}

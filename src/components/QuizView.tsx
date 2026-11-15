@@ -20,6 +20,7 @@ export function QuizView({ cards, dueCards, onFinish }: Props) {
   const [results, setResults] = useState<QuizResult[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [feedback, setFeedback] = useState<"correct" | "incorrect" | null>(null);
+  const [hintRevealed, setHintRevealed] = useState(false);
 
   const cardsById = useMemo(() => {
     const map = new Map<string, VocabCard>();
@@ -35,6 +36,7 @@ export function QuizView({ cards, dueCards, onFinish }: Props) {
     setResults([]);
     setFeedback(null);
     setInputValue("");
+    setHintRevealed(false);
   }
 
   function submitAnswer(userAnswer: string) {
@@ -52,6 +54,7 @@ export function QuizView({ cards, dueCards, onFinish }: Props) {
     if (!quiz) return;
     setFeedback(null);
     setInputValue("");
+    setHintRevealed(false);
     if (qIdx + 1 >= quiz.length) {
       onFinish(results);
       setQuiz(null);
@@ -146,13 +149,28 @@ export function QuizView({ cards, dueCards, onFinish }: Props) {
               disabled={feedback !== null}
             />
             {feedback === null && (
-              <button
-                className="rounded-full bg-vermillion px-4 py-2 text-sm font-semibold text-white active:scale-95"
-                onClick={() => submitAnswer(inputValue)}
-                disabled={inputValue.trim().length === 0}
-              >
-                回答する
-              </button>
+              <div className="flex gap-2">
+                <button
+                  className="rounded-full bg-vermillion px-4 py-2 text-sm font-semibold text-white active:scale-95"
+                  onClick={() => submitAnswer(inputValue)}
+                  disabled={inputValue.trim().length === 0}
+                >
+                  回答する
+                </button>
+                <button
+                  className="rounded-full border border-washi-border bg-washi-card px-4 py-2 text-sm text-sumi-ink transition active:scale-95 disabled:opacity-40 dark:border-washi-borderDark dark:bg-washi-cardDark dark:text-sumi-inkDark"
+                  onClick={() => setHintRevealed(true)}
+                  disabled={hintRevealed || !card || card.synonyms.length === 0}
+                  type="button"
+                >
+                  ヒント
+                </button>
+              </div>
+            )}
+            {hintRevealed && (
+              <p className="text-xs text-sumi-sub dark:text-sumi-subDark">
+                類義語: {card?.synonyms.map((s) => s.word).join("、") || "登録されていません"}
+              </p>
             )}
           </div>
         ) : (
