@@ -10,6 +10,38 @@ type Props = {
 const EMPTY_SYNONYM: Synonym = { word: "", nuance: "" };
 const EMPTY_ANTONYM: Antonym = { word: "", example: "" };
 
+const FORMAT_TEMPLATE = `【単語】〇〇（読み方：〇〇）
+■ 意味：〇〇
+■ 語感・使う場面：〇〇
+
+▼ 類義語（2つ）
+ 1. 〇〇 ┈ 違い：〇〇
+    例文：〇〇
+ 2. 〇〇 ┈ 違い：〇〇
+    例文：〇〇
+
+▼ 対義語（2つ）
+ 1. 〇〇
+    例文：〇〇
+ 2. 〇〇
+    例文：〇〇`;
+
+const SAMPLE_TEXT = `【単語】飄々（読み方：ひょうひょう）
+■ 意味：世間の評価や周囲の状況に動じず、気負わずつかみどころのない様子
+■ 語感・使う場面：人の性格や態度を表す際に使う、やや肯定的で飄逸なニュアンスを持つ書き言葉
+
+▼ 類義語（2つ）
+ 1. 超然 ┈ 違い：物事に動じない点は似ているが、「飄々」より重々しく気高い響きがある
+    例文：彼は批判にも超然とした態度を崩さなかった。
+ 2. のらりくらり ┈ 違い：つかみどころがない点は似ているが、はぐらかす・逃げるという否定的なニュアンスが強い
+    例文：彼はのらりくらりと質問をかわした。
+
+▼ 対義語（2つ）
+ 1. 生真面目
+    例文：彼は生真面目すぎて周囲と衝突することがある。
+ 2. 深刻
+    例文：彼は深刻な表情で会議に臨んだ。`;
+
 export function AddWordView({ onAdd }: Props) {
   const [pasteText, setPasteText] = useState("");
   const [missingFields, setMissingFields] = useState<string[]>([]);
@@ -83,6 +115,39 @@ export function AddWordView({ onAdd }: Props) {
         <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
           テキストを貼り付けて自動登録
         </h2>
+
+        <details className="mb-3 rounded-lg border border-washi-border bg-washi-card p-3 text-sm dark:border-washi-borderDark dark:bg-washi-cardDark">
+          <summary className="cursor-pointer font-semibold text-vermillion">
+            入力フォーマットの説明を見る
+          </summary>
+          <div className="mt-2 flex flex-col gap-3">
+            <p className="text-xs leading-relaxed text-sumi-sub dark:text-sumi-subDark">
+              下記のテンプレート通りにテキストを用意して貼り付けると、自動的に各項目へ分解されます。
+              類義語・対義語はそれぞれ2つまで対応していますが、1つだけでも登録できます。
+              <br />
+              ※「例文」欄（カード自体の例文）はこのフォーマットに含まれないため、貼り付け後に手動で1文入力してください。
+            </p>
+            <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-washi-bg p-2 text-xs text-sumi-ink dark:bg-washi-bgDark dark:text-sumi-inkDark">
+              {FORMAT_TEMPLATE}
+            </pre>
+            <div>
+              <p className="mb-1 text-xs font-semibold text-sumi-ink dark:text-sumi-inkDark">
+                例（「飄々」）:
+              </p>
+              <pre className="overflow-x-auto whitespace-pre-wrap rounded-lg bg-washi-bg p-2 text-xs text-sumi-ink dark:bg-washi-bgDark dark:text-sumi-inkDark">
+                {SAMPLE_TEXT}
+              </pre>
+              <button
+                type="button"
+                className="mt-2 rounded-full border border-washi-border px-3 py-1 text-xs text-sumi-ink active:scale-95 dark:border-washi-borderDark dark:text-sumi-inkDark"
+                onClick={() => setPasteText(SAMPLE_TEXT)}
+              >
+                この例を下のテキストエリアに読み込む
+              </button>
+            </div>
+          </div>
+        </details>
+
         <textarea
           className="h-40 w-full rounded-lg border border-washi-border bg-washi-card p-3 text-sm text-sumi-ink outline-none focus:border-vermillion dark:border-washi-borderDark dark:bg-washi-cardDark dark:text-sumi-inkDark"
           placeholder={"【単語】〇〇（読み方：〇〇）\n■ 意味：〇〇\n..."}
