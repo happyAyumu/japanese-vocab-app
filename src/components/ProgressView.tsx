@@ -146,7 +146,7 @@ export function ProgressView({ cards }: Props) {
         </p>
         <div className="h-56 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
+            <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 0, left: -10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e6ddd0" />
               <XAxis
                 dataKey="day"
@@ -154,7 +154,7 @@ export function ProgressView({ cards }: Props) {
                 stroke="#7a7266"
                 interval={tickInterval}
               />
-              <YAxis allowDecimals={false} fontSize={11} stroke="#7a7266" width={32} />
+              <YAxis allowDecimals={false} fontSize={11} stroke="#7a7266" width={40} />
               <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""} />
               <Bar dataKey="count" fill="#a8562f" radius={[4, 4, 0, 0]} />
             </BarChart>
