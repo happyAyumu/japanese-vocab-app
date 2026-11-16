@@ -107,7 +107,8 @@ export function getDueQuizCards(
  * 間隔を伸縮させる（SM-2系アルゴリズムの考え方）。Lv1=12時間を起点とする。
  *
  * - もう一度 (again): 覚えていなかった。レベルを0に戻し、すぐに（このセッション内）再出題する。
- * - 難しい   (hard):  レベルは上げず、現在レベルの間隔よりやや長め（×1.2）で再出題する。
+ * - 難しい   (hard):  レベルは上げず、現在レベルの間隔より短め（×0.5）で再出題する
+ *                     （Good/Easyより早く戻ってくる。again <= hard <= good <= easy の順序を常に保つ）。
  * - 普通     (good):  レベルを+1し、通常の間隔表に従って次回を設定する。
  * - 簡単     (easy):  レベルを+2し、通常より長め（×1.3）の間隔で次回を設定する。
  */
@@ -125,7 +126,7 @@ export function applyGrade(
     case "again":
       return { ...card, srsLevel: 0, nextReviewAt: now, history };
     case "hard": {
-      const hours = Math.max(1, Math.round(intervalHoursForLevel(card.srsLevel) * 1.2));
+      const hours = Math.max(1, Math.round(intervalHoursForLevel(card.srsLevel) * 0.5));
       return { ...card, srsLevel: card.srsLevel, nextReviewAt: addHours(now, hours), history };
     }
     case "good": {
@@ -149,7 +150,7 @@ export function applyGrade(
 export function previewGradeIntervals(card: VocabCard): Record<Grade, number> {
   return {
     again: 0,
-    hard: Math.max(1, Math.round(intervalHoursForLevel(card.srsLevel) * 1.2)),
+    hard: Math.max(1, Math.round(intervalHoursForLevel(card.srsLevel) * 0.5)),
     good: intervalHoursForLevel(card.srsLevel + 1),
     easy: Math.round(intervalHoursForLevel(card.srsLevel + 2) * 1.3),
   };

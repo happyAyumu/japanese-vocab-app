@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Grade, SortMode, VocabCard } from "../types/vocab";
 import { Flashcard } from "./Flashcard";
-import { formatIntervalLabel, previewGradeIntervals, sortByWeakness } from "../lib/srs";
+import { formatIntervalLabel, nowISO, previewGradeIntervals, sortByWeakness } from "../lib/srs";
 
 type FilterMode = "all" | "dueToday" | "weak";
 
@@ -13,7 +13,9 @@ type Props = {
 };
 
 export function DeckView({ cards, dueCardIds, sortMode, onGrade }: Props) {
-  const [filterMode, setFilterMode] = useState<FilterMode>("all");
+  // デフォルトは「今日の復習」。評価すると即座にnextReviewAtが先に伸びて
+  // dueCardIdsから外れるため、一覧から自動的に消える。
+  const [filterMode, setFilterMode] = useState<FilterMode>("dueToday");
   const [shuffleSeed, setShuffleSeed] = useState(0);
   const [idx, setIdx] = useState(0);
   const touchStartX = useRef<number | null>(null);
@@ -68,6 +70,15 @@ export function DeckView({ cards, dueCardIds, sortMode, onGrade }: Props) {
   }
 
   const preview = current ? previewGradeIntervals(current) : null;
+  const isDue = current ? current.nextReviewAt <= nowISO() : false;
+  const hoursUntilDue = current
+    ? Math.max(
+        0,
+        Math.round(
+          (new Date(current.nextReviewAt).getTime() - new Date().getTime()) / (60 * 60 * 1000),
+        ),
+      )
+    : 0;
 
   return (
     <div className="flex flex-col items-center">
@@ -121,34 +132,42 @@ export function DeckView({ cards, dueCardIds, sortMode, onGrade }: Props) {
 
       <div className="mt-5 flex w-full max-w-md items-center justify-center gap-2">
         <NavButton onClick={() => go(-1)}>←</NavButton>
-        <GradeButton
-          colorClass="border-weak text-weak"
-          label="もう一度"
-          interval={preview ? formatIntervalLabel(preview.again) : ""}
-          onClick={() => handleGrade("again")}
-          disabled={!current}
-        />
-        <GradeButton
-          colorClass="border-hard text-hard"
-          label="難しい"
-          interval={preview ? formatIntervalLabel(preview.hard) : ""}
-          onClick={() => handleGrade("hard")}
-          disabled={!current}
-        />
-        <GradeButton
-          colorClass="border-good text-good"
-          label="普通"
-          interval={preview ? formatIntervalLabel(preview.good) : ""}
-          onClick={() => handleGrade("good")}
-          disabled={!current}
-        />
-        <GradeButton
-          colorClass="border-easy text-easy"
-          label="簡単"
-          interval={preview ? formatIntervalLabel(preview.easy) : ""}
-          onClick={() => handleGrade("easy")}
-          disabled={!current}
-        />
+        {current && !isDue ? (
+          <div className="flex-1 rounded-xl border border-washi-border bg-washi-card px-3 py-3 text-center text-xs text-sumi-sub dark:border-washi-borderDark dark:bg-washi-cardDark dark:text-sumi-subDark">
+            まだ復習時期ではありません（次回: {formatIntervalLabel(hoursUntilDue)}）
+          </div>
+        ) : (
+          <>
+            <GradeButton
+              colorClass="border-weak text-weak"
+              label="もう一度"
+              interval={preview ? formatIntervalLabel(preview.again) : ""}
+              onClick={() => handleGrade("again")}
+              disabled={!current}
+            />
+            <GradeButton
+              colorClass="border-hard text-hard"
+              label="難しい"
+              interval={preview ? formatIntervalLabel(preview.hard) : ""}
+              onClick={() => handleGrade("hard")}
+              disabled={!current}
+            />
+            <GradeButton
+              colorClass="border-good text-good"
+              label="普通"
+              interval={preview ? formatIntervalLabel(preview.good) : ""}
+              onClick={() => handleGrade("good")}
+              disabled={!current}
+            />
+            <GradeButton
+              colorClass="border-easy text-easy"
+              label="簡単"
+              interval={preview ? formatIntervalLabel(preview.easy) : ""}
+              onClick={() => handleGrade("easy")}
+              disabled={!current}
+            />
+          </>
+        )}
         <NavButton onClick={() => go(1)}>→</NavButton>
       </div>
     </div>

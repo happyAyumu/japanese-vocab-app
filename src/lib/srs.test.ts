@@ -152,11 +152,18 @@ describe("applyGrade", () => {
     ]);
   });
 
-  it("hard keeps the level unchanged but pushes the interval out slightly", () => {
+  it("hard keeps the level unchanged and schedules sooner than good (shorter, not longer)", () => {
     const card = makeCard({ srsLevel: 2 }); // base interval 36 hours
     const updated = applyGrade(card, "hard", NOW);
     expect(updated.srsLevel).toBe(2);
-    expect(updated.nextReviewAt).toBe(addHours(NOW, 43)); // round(36 * 1.2)
+    expect(updated.nextReviewAt).toBe(addHours(NOW, 18)); // round(36 * 0.5)
+  });
+
+  it("hard never schedules later than good, even at level 0", () => {
+    const card = makeCard({ srsLevel: 0 });
+    const hard = applyGrade(card, "hard", NOW).nextReviewAt;
+    const good = applyGrade(card, "good", NOW).nextReviewAt;
+    expect(hard <= good).toBe(true);
   });
 
   it("good promotes the level by 1 using the standard interval table", () => {
@@ -174,16 +181,19 @@ describe("applyGrade", () => {
     expect(easyUpdate.nextReviewAt >= goodUpdate.nextReviewAt).toBe(true);
   });
 
-  it("ordering of next review dates is again <= hard <= good <= easy", () => {
-    const card = makeCard({ srsLevel: 2 });
-    const again = applyGrade(card, "again", NOW).nextReviewAt;
-    const hard = applyGrade(card, "hard", NOW).nextReviewAt;
-    const good = applyGrade(card, "good", NOW).nextReviewAt;
-    const easy = applyGrade(card, "easy", NOW).nextReviewAt;
-    expect(again <= hard).toBe(true);
-    expect(hard <= good).toBe(true);
-    expect(good <= easy).toBe(true);
-  });
+  it.each([-1, 0, 1, 2, 3, 4, 5, 10])(
+    "ordering of next review dates is again <= hard <= good <= easy at level %i",
+    (srsLevel) => {
+      const card = makeCard({ srsLevel });
+      const again = applyGrade(card, "again", NOW).nextReviewAt;
+      const hard = applyGrade(card, "hard", NOW).nextReviewAt;
+      const good = applyGrade(card, "good", NOW).nextReviewAt;
+      const easy = applyGrade(card, "easy", NOW).nextReviewAt;
+      expect(again <= hard).toBe(true);
+      expect(hard <= good).toBe(true);
+      expect(good <= easy).toBe(true);
+    },
+  );
 });
 
 describe("previewGradeIntervals", () => {
