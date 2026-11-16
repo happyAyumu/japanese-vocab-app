@@ -15,6 +15,7 @@ import type { VocabCard } from "../types/vocab";
 import {
   MASTERY_LEVEL_THRESHOLD,
   computeStreak,
+  dailyStudyCounts,
   isMastered,
   levelDistribution,
   masteryRate,
@@ -30,15 +31,7 @@ export function ProgressView({ cards }: Props) {
   const streak = useMemo(() => computeStreak(cards), [cards]);
   const buckets = useMemo(() => levelDistribution(cards), [cards]);
 
-  const byDate = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const c of cards) {
-      counts.set(c.registeredAt, (counts.get(c.registeredAt) ?? 0) + 1);
-    }
-    return Array.from(counts.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, count]) => ({ date, count }));
-  }, [cards]);
+  const studyCounts = useMemo(() => dailyStudyCounts(cards), [cards]);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 p-4">
@@ -112,19 +105,28 @@ export function ProgressView({ cards }: Props) {
 
       <div>
         <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
-          追加日ごとの単語数
+          日別の学習量
         </h2>
-        <div className="h-56 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={byDate}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e6ddd0" />
-              <XAxis dataKey="date" fontSize={11} stroke="#7a7266" />
-              <YAxis allowDecimals={false} fontSize={11} stroke="#7a7266" />
-              <Tooltip />
-              <Bar dataKey="count" fill="#a8562f" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        <p className="mb-2 text-xs text-sumi-sub dark:text-sumi-subDark">
+          フラッシュカードの評価＋クイズの回答の合計回数（1日ごと）
+        </p>
+        {studyCounts.length === 0 ? (
+          <p className="text-sm text-sumi-sub dark:text-sumi-subDark">
+            まだ学習記録がありません。カードを評価するかクイズに答えると、ここにグラフが表示されます。
+          </p>
+        ) : (
+          <div className="h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={studyCounts}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e6ddd0" />
+                <XAxis dataKey="date" fontSize={11} stroke="#7a7266" />
+                <YAxis allowDecimals={false} fontSize={11} stroke="#7a7266" />
+                <Tooltip />
+                <Bar dataKey="count" fill="#a8562f" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

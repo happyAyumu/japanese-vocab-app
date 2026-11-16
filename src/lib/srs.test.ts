@@ -15,6 +15,7 @@ import {
   isMastered,
   computeStreak,
   levelDistribution,
+  dailyStudyCounts,
 } from "./srs";
 
 const NOW = "2026-01-01T00:00:00.000Z";
@@ -259,6 +260,14 @@ describe("computeStreak", () => {
     expect(computeStreak(cards, "2026-01-05")).toBe(2);
   });
 
+  it("counts quiz answers (quizHistory) toward the streak, not just flashcard grading", () => {
+    const cards = [
+      makeCard({ id: "a", quizHistory: [{ date: "2026-01-05", correct: true }] }),
+      makeCard({ id: "b", quizHistory: [{ date: "2026-01-04", correct: false }] }),
+    ];
+    expect(computeStreak(cards, "2026-01-05")).toBe(2);
+  });
+
   it("returns 0 when there is no history at all", () => {
     expect(computeStreak([makeCard({})], "2026-01-05")).toBe(0);
   });
@@ -279,5 +288,33 @@ describe("levelDistribution", () => {
     const buckets = levelDistribution(cards);
     expect(buckets.map((b) => b.count)).toEqual([2, 2, 2, 2]);
     expect(buckets.reduce((sum, b) => sum + b.count, 0)).toBe(cards.length);
+  });
+});
+
+describe("dailyStudyCounts", () => {
+  it("counts flashcard grades and quiz answers together per day, across all cards", () => {
+    const cards = [
+      makeCard({
+        id: "a",
+        history: [
+          { date: "2026-01-05", correct: true },
+          { date: "2026-01-05", correct: false },
+        ],
+        quizHistory: [{ date: "2026-01-05", correct: true }],
+      }),
+      makeCard({
+        id: "b",
+        history: [{ date: "2026-01-04", correct: true }],
+        quizHistory: [],
+      }),
+    ];
+    expect(dailyStudyCounts(cards)).toEqual([
+      { date: "2026-01-04", count: 1 },
+      { date: "2026-01-05", count: 3 },
+    ]);
+  });
+
+  it("returns an empty array when nothing has been studied", () => {
+    expect(dailyStudyCounts([makeCard({})])).toEqual([]);
   });
 });

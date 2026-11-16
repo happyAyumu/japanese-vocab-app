@@ -226,6 +226,9 @@ export function computeStreak(cards: VocabCard[], today: string = todayISO()): n
     for (const entry of card.history) {
       studiedDates.add(entry.date);
     }
+    for (const entry of card.quizHistory) {
+      studiedDates.add(entry.date);
+    }
   }
 
   let streak = 0;
@@ -235,6 +238,30 @@ export function computeStreak(cards: VocabCard[], today: string = todayISO()): n
     cursor = addDays(cursor, -1);
   }
   return streak;
+}
+
+export type DailyStudyCount = {
+  date: string;
+  count: number;
+};
+
+/**
+ * 日別の学習量（フラッシュカードの評価＋クイズの回答の合計回数）。
+ * 「追加日ごとの単語数」(登録日ベース)ではなく、実際に学習行動をした日ごとの集計。
+ */
+export function dailyStudyCounts(cards: VocabCard[]): DailyStudyCount[] {
+  const counts = new Map<string, number>();
+  for (const card of cards) {
+    for (const entry of card.history) {
+      counts.set(entry.date, (counts.get(entry.date) ?? 0) + 1);
+    }
+    for (const entry of card.quizHistory) {
+      counts.set(entry.date, (counts.get(entry.date) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, count]) => ({ date, count }));
 }
 
 export type LevelBucket = {
