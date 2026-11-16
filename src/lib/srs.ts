@@ -1,20 +1,33 @@
 import type { Grade, VocabCard } from "../types/vocab";
 
 /**
- * srsLevel と次回復習までの間隔（日数）の対応表。
+ * srsLevel と次回復習までの間隔（時間）の対応表。
  * level 0 は「まだ一度も正解していない/直近で間違えた」状態。
+ * Lv1=12時間を起点に、以前の日単位テーブル（1/3/7/14/30日）を1/2に比例縮小している。
  */
-const INTERVAL_DAYS_BY_LEVEL: Record<number, number> = {
-  1: 1, // 翌日
-  2: 3, // 3日後
-  3: 7, // 1週間後
-  4: 14, // 2週間後
+const INTERVAL_HOURS_BY_LEVEL: Record<number, number> = {
+  1: 12, // 12時間後
+  2: 36, // 1.5日後
+  3: 84, // 3.5日後
+  4: 168, // 7日後
 };
-const DEFAULT_INTERVAL_DAYS = 30; // level 5以降は1ヶ月後
+const DEFAULT_INTERVAL_HOURS = 360; // level 5以降は15日後
 
-export function intervalDaysForLevel(level: number): number {
-  if (level <= 0) return 1;
-  return INTERVAL_DAYS_BY_LEVEL[level] ?? DEFAULT_INTERVAL_DAYS;
+export function intervalHoursForLevel(level: number): number {
+  if (level <= 0) return 12;
+  return INTERVAL_HOURS_BY_LEVEL[level] ?? DEFAULT_INTERVAL_HOURS;
+}
+
+/** 指定した日時（ISO日時文字列）に指定時間を加算したISO日時文字列を返す */
+export function addHours(isoDateTime: string, hours: number): string {
+  const d = new Date(isoDateTime);
+  d.setTime(d.getTime() + hours * 60 * 60 * 1000);
+  return d.toISOString();
+}
+
+/** 現在時刻のISO日時文字列（次回復習日時の計算に使う） */
+export function nowISO(): string {
+  return new Date().toISOString();
 }
 
 export function addDays(isoDate: string, days: number): string {
@@ -23,8 +36,14 @@ export function addDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** 今日の日付（ISO日付文字列、時刻なし）。history の日付や連続学習日数の判定に使う */
 export function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** ISO日時文字列から日付部分（YYYY-MM-DD）だけを取り出す */
+function dateOnly(isoDateTime: string): string {
+  return isoDateTime.slice(0, 10);
 }
 
 /**
@@ -36,57 +55,58 @@ export function todayISO(): string {
  */
 export function applyQuizCorrectAnswer(
   card: VocabCard,
-  date: string = todayISO(),
+  now: string = nowISO(),
 ): VocabCard {
   const nextLevel = card.quizSrsLevel + 1;
   return {
     ...card,
     quizSrsLevel: nextLevel,
-    quizNextReviewAt: addDays(date, intervalDaysForLevel(nextLevel)),
-    quizHistory: [...card.quizHistory, { date, correct: true }],
+    quizNextReviewAt: addHours(now, intervalHoursForLevel(nextLevel)),
+    quizHistory: [...card.quizHistory, { date: dateOnly(now), correct: true }],
   };
 }
 
 /**
  * クイズで「不正解」だった場合のカード更新。
- * quizSrsLevel を0に戻し、翌日に再出題する。
+ * quizSrsLevel を0に戻し、12時間後に再出題する。
  */
 export function applyQuizIncorrectAnswer(
   card: VocabCard,
-  date: string = todayISO(),
+  now: string = nowISO(),
 ): VocabCard {
   return {
     ...card,
     quizSrsLevel: 0,
-    quizNextReviewAt: addDays(date, 1),
-    quizHistory: [...card.quizHistory, { date, correct: false }],
+    quizNextReviewAt: addHours(now, intervalHoursForLevel(0)),
+    quizHistory: [...card.quizHistory, { date: dateOnly(now), correct: false }],
   };
 }
 
 export function applyQuizAnswer(
   card: VocabCard,
   correct: boolean,
-  date: string = todayISO(),
+  now: string = nowISO(),
 ): VocabCard {
   return correct
-    ? applyQuizCorrectAnswer(card, date)
-    : applyQuizIncorrectAnswer(card, date);
+    ? applyQuizCorrectAnswer(card, now)
+    : applyQuizIncorrectAnswer(card, now);
 }
 
-/** 今日以前がクイズの復習日になっているカードだけを抽出する */
+/** 現在時刻以前がクイズの復習日時になっているカードだけを抽出する */
 export function getDueQuizCards(
   cards: VocabCard[],
-  date: string = todayISO(),
+  now: string = nowISO(),
 ): VocabCard[] {
-  return cards.filter((c) => c.quizNextReviewAt <= date);
+  return cards.filter((c) => c.quizNextReviewAt <= now);
 }
 
 /**
  * フラッシュカード復習時の4段階評価（もう一度／難しい／普通／簡単）。
- * エビングハウスの忘却曲線に基づき、間隔を指数的に延ばしていく一方、
- * 自己評価の難易度に応じて間隔を伸縮させる（SM-2系アルゴリズムの考え方）。
+ * エビングハウスの忘却曲線の「一度覚えると忘却が緩やかになる」という考え方に
+ * ヒントを得て間隔を指数的に延ばしていく一方、自己評価の難易度に応じて
+ * 間隔を伸縮させる（SM-2系アルゴリズムの考え方）。Lv1=12時間を起点とする。
  *
- * - もう一度 (again): 覚えていなかった。レベルを0に戻し、即日（このセッション内）に再出題する。
+ * - もう一度 (again): 覚えていなかった。レベルを0に戻し、すぐに（このセッション内）再出題する。
  * - 難しい   (hard):  レベルは上げず、現在レベルの間隔よりやや長め（×1.2）で再出題する。
  * - 普通     (good):  レベルを+1し、通常の間隔表に従って次回を設定する。
  * - 簡単     (easy):  レベルを+2し、通常より長め（×1.3）の間隔で次回を設定する。
@@ -94,58 +114,66 @@ export function getDueQuizCards(
 export function applyGrade(
   card: VocabCard,
   grade: Grade,
-  date: string = todayISO(),
+  now: string = nowISO(),
 ): VocabCard {
-  const history = [...card.history, { date, correct: grade !== "again", grade }];
+  const history = [
+    ...card.history,
+    { date: dateOnly(now), correct: grade !== "again", grade },
+  ];
 
   switch (grade) {
     case "again":
-      return { ...card, srsLevel: 0, nextReviewAt: date, history };
+      return { ...card, srsLevel: 0, nextReviewAt: now, history };
     case "hard": {
-      const days = Math.max(1, Math.round(intervalDaysForLevel(card.srsLevel) * 1.2));
-      return { ...card, srsLevel: card.srsLevel, nextReviewAt: addDays(date, days), history };
+      const hours = Math.max(1, Math.round(intervalHoursForLevel(card.srsLevel) * 1.2));
+      return { ...card, srsLevel: card.srsLevel, nextReviewAt: addHours(now, hours), history };
     }
     case "good": {
       const nextLevel = card.srsLevel + 1;
       return {
         ...card,
         srsLevel: nextLevel,
-        nextReviewAt: addDays(date, intervalDaysForLevel(nextLevel)),
+        nextReviewAt: addHours(now, intervalHoursForLevel(nextLevel)),
         history,
       };
     }
     case "easy": {
       const nextLevel = card.srsLevel + 2;
-      const days = Math.round(intervalDaysForLevel(nextLevel) * 1.3);
-      return { ...card, srsLevel: nextLevel, nextReviewAt: addDays(date, days), history };
+      const hours = Math.round(intervalHoursForLevel(nextLevel) * 1.3);
+      return { ...card, srsLevel: nextLevel, nextReviewAt: addHours(now, hours), history };
     }
   }
 }
 
-/** 4段階評価ボタンに表示する「次回までの日数」プレビュー */
+/** 4段階評価ボタンに表示する「次回までの時間（時間単位）」プレビュー */
 export function previewGradeIntervals(card: VocabCard): Record<Grade, number> {
   return {
     again: 0,
-    hard: Math.max(1, Math.round(intervalDaysForLevel(card.srsLevel) * 1.2)),
-    good: intervalDaysForLevel(card.srsLevel + 1),
-    easy: Math.round(intervalDaysForLevel(card.srsLevel + 2) * 1.3),
+    hard: Math.max(1, Math.round(intervalHoursForLevel(card.srsLevel) * 1.2)),
+    good: intervalHoursForLevel(card.srsLevel + 1),
+    easy: Math.round(intervalHoursForLevel(card.srsLevel + 2) * 1.3),
   };
 }
 
-export function formatIntervalLabel(days: number): string {
-  if (days <= 0) return "今日中";
-  if (days === 1) return "1日後";
-  if (days < 30) return `${days}日後`;
+/** 時間数を「すぐに／○時間後／○日後／○ヶ月後／○年後」の日本語ラベルに変換する */
+export function formatIntervalLabel(hours: number): string {
+  if (hours <= 0) return "すぐに";
+  if (hours < 24) return `${hours}時間後`;
+  const days = hours / 24;
+  if (days < 30) {
+    const rounded = Math.round(days * 10) / 10;
+    return `${rounded}日後`;
+  }
   if (days < 365) return `${Math.round(days / 30)}ヶ月後`;
   return `${Math.round(days / 365)}年後`;
 }
 
-/** 今日以前が復習日になっているカードだけを抽出する（今日の復習ビュー） */
+/** 現在時刻以前が復習日時になっているカードだけを抽出する（今日の復習ビュー） */
 export function getDueCards(
   cards: VocabCard[],
-  date: string = todayISO(),
+  now: string = nowISO(),
 ): VocabCard[] {
-  return cards.filter((c) => c.nextReviewAt <= date);
+  return cards.filter((c) => c.nextReviewAt <= now);
 }
 
 /** 直近の正答率（0〜1）。履歴が無い場合は null */

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Antonym, Synonym, VocabCard } from "../types/vocab";
 import { parseVocabText } from "../lib/parser";
-import { todayISO } from "../lib/srs";
+import { nowISO, todayISO } from "../lib/srs";
 
 type Props = {
   onAdd: (card: VocabCard) => void;
@@ -96,10 +96,10 @@ export function AddWordView({ onAdd }: Props) {
       example: example.trim(),
       registeredAt: todayISO(),
       srsLevel: 0,
-      nextReviewAt: todayISO(),
+      nextReviewAt: nowISO(),
       history: [],
       quizSrsLevel: 0,
-      quizNextReviewAt: todayISO(),
+      quizNextReviewAt: nowISO(),
       quizHistory: [],
     };
 

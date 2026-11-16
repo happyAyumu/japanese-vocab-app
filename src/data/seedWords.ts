@@ -1,6 +1,7 @@
 import type { VocabCard } from "../types/vocab";
 
 const TODAY = "2026-08-28";
+const TODAY_DATETIME = "2026-08-28T00:00:00.000Z";
 
 // 過去のテストで間違いが多かった単語（優先的に出題されるよう srsLevel を低く設定）
 const WEAK_KANJI = new Set(["狡猾", "忌避", "紅潮"]);
@@ -302,9 +303,9 @@ export const seedWords: VocabCard[] = seedEntries.map((entry, index) => ({
   id: `seed-${index + 1}`,
   registeredAt: TODAY,
   srsLevel: WEAK_KANJI.has(entry.kanji) ? -1 : 0,
-  nextReviewAt: TODAY,
+  nextReviewAt: TODAY_DATETIME,
   history: [],
   quizSrsLevel: 0,
-  quizNextReviewAt: TODAY,
+  quizNextReviewAt: TODAY_DATETIME,
   quizHistory: [],
 }));

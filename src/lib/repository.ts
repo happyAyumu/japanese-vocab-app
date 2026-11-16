@@ -1,6 +1,6 @@
 import type { VocabCard } from "../types/vocab";
 import { seedWords } from "../data/seedWords";
-import { todayISO } from "./srs";
+import { nowISO } from "./srs";
 
 /**
  * 旧バージョン（クイズの進捗をフラッシュカードと共有していた頃）のデータを、
@@ -12,7 +12,7 @@ function migrateCard(card: VocabCard): VocabCard {
   return {
     ...card,
     quizSrsLevel: card.quizSrsLevel ?? 0,
-    quizNextReviewAt: card.quizNextReviewAt ?? todayISO(),
+    quizNextReviewAt: card.quizNextReviewAt ?? nowISO(),
     quizHistory: card.quizHistory ?? [],
   };
 }
