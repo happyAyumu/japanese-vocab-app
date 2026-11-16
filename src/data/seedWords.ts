@@ -7,7 +7,14 @@ const WEAK_KANJI = new Set(["狡猾", "忌避", "紅潮"]);
 
 type SeedEntry = Omit<
   VocabCard,
-  "id" | "registeredAt" | "srsLevel" | "nextReviewAt" | "history"
+  | "id"
+  | "registeredAt"
+  | "srsLevel"
+  | "nextReviewAt"
+  | "history"
+  | "quizSrsLevel"
+  | "quizNextReviewAt"
+  | "quizHistory"
 >;
 
 const seedEntries: SeedEntry[] = [
@@ -297,4 +304,7 @@ export const seedWords: VocabCard[] = seedEntries.map((entry, index) => ({
   srsLevel: WEAK_KANJI.has(entry.kanji) ? -1 : 0,
   nextReviewAt: TODAY,
   history: [],
+  quizSrsLevel: 0,
+  quizNextReviewAt: TODAY,
+  quizHistory: [],
 }));

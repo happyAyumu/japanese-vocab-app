@@ -20,8 +20,8 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 export default function App() {
-  const { cards, addCard, answerCard, gradeCard, replaceAll } = useVocabStore();
-  const { dueCards, mastery } = useSRS(cards);
+  const { cards, addCard, quizAnswerCard, gradeCard, replaceAll } = useVocabStore();
+  const { dueCards, dueQuizCards, mastery } = useSRS(cards);
   const { dark, toggleDark } = useDarkMode();
   const [tab, setTab] = useState<Tab>("deck");
   const [sortMode, setSortMode] = useState<SortMode>("registered");
@@ -49,11 +49,11 @@ export default function App() {
         {tab === "quiz" && (
           <QuizView
             cards={cards}
-            dueCards={dueCards}
+            dueCards={dueQuizCards}
             onFinish={(results) => {
               for (const r of results) {
                 if (!r.correct) {
-                  answerCard(r.cardId, false);
+                  quizAnswerCard(r.cardId, false);
                 }
               }
             }}

@@ -1,5 +1,21 @@
 import type { VocabCard } from "../types/vocab";
 import { seedWords } from "../data/seedWords";
+import { todayISO } from "./srs";
+
+/**
+ * 旧バージョン（クイズの進捗をフラッシュカードと共有していた頃）のデータを、
+ * quizSrsLevel/quizNextReviewAt/quizHistory を持つ新しい形式に補完する。
+ * 既存ユーザーのデータを壊さず、かつクイズが即座に利用できるようにするため、
+ * 欠けている場合は「今日から」クイズの対象になるようにする。
+ */
+function migrateCard(card: VocabCard): VocabCard {
+  return {
+    ...card,
+    quizSrsLevel: card.quizSrsLevel ?? 0,
+    quizNextReviewAt: card.quizNextReviewAt ?? todayISO(),
+    quizHistory: card.quizHistory ?? [],
+  };
+}
 
 /**
  * カードデータの永続化を抽象化するリポジトリインターフェース。
@@ -25,7 +41,7 @@ export class LocalStorageVocabRepository implements VocabRepository {
       }
       const parsed = JSON.parse(raw) as VocabCard[];
       if (!Array.isArray(parsed)) throw new Error("invalid stored data");
-      return parsed;
+      return parsed.map(migrateCard);
     } catch {
       return seedWords;
     }
@@ -79,7 +95,7 @@ export function importCardsFromJSON(json: string): ImportResult {
         return { ok: false, error: "カードのデータ形式が不正です" };
       }
     }
-    return { ok: true, cards: parsed as VocabCard[] };
+    return { ok: true, cards: (parsed as VocabCard[]).map(migrateCard) };
   } catch {
     return { ok: false, error: "JSONの解析に失敗しました" };
   }

@@ -28,46 +28,57 @@ export function todayISO(): string {
 }
 
 /**
- * 「覚えた」と回答した場合のカード更新。
- * srsLevel を+1し、レベルに応じて次回復習日を先延ばしする。
+ * クイズで「正解」した場合のカード更新。
+ * クイズの進捗はフラッシュカード（カード画面）とは別管理のため、
+ * quizSrsLevel／quizNextReviewAt／quizHistory のみを更新する。
+ * （これまでは共有のsrsLevel/nextReviewAtを操作していたため、
+ * カード画面を一通り終えるとクイズの出題対象が0件になってしまっていた）
  */
-export function applyCorrectAnswer(
+export function applyQuizCorrectAnswer(
   card: VocabCard,
   date: string = todayISO(),
 ): VocabCard {
-  const nextLevel = card.srsLevel + 1;
+  const nextLevel = card.quizSrsLevel + 1;
   return {
     ...card,
-    srsLevel: nextLevel,
-    nextReviewAt: addDays(date, intervalDaysForLevel(nextLevel)),
-    history: [...card.history, { date, correct: true }],
+    quizSrsLevel: nextLevel,
+    quizNextReviewAt: addDays(date, intervalDaysForLevel(nextLevel)),
+    quizHistory: [...card.quizHistory, { date, correct: true }],
   };
 }
 
 /**
- * 「わからない」と回答した場合のカード更新。
- * srsLevel を0に戻し、翌日に再出題する。
+ * クイズで「不正解」だった場合のカード更新。
+ * quizSrsLevel を0に戻し、翌日に再出題する。
  */
-export function applyIncorrectAnswer(
+export function applyQuizIncorrectAnswer(
   card: VocabCard,
   date: string = todayISO(),
 ): VocabCard {
   return {
     ...card,
-    srsLevel: 0,
-    nextReviewAt: addDays(date, 1),
-    history: [...card.history, { date, correct: false }],
+    quizSrsLevel: 0,
+    quizNextReviewAt: addDays(date, 1),
+    quizHistory: [...card.quizHistory, { date, correct: false }],
   };
 }
 
-export function applyAnswer(
+export function applyQuizAnswer(
   card: VocabCard,
   correct: boolean,
   date: string = todayISO(),
 ): VocabCard {
   return correct
-    ? applyCorrectAnswer(card, date)
-    : applyIncorrectAnswer(card, date);
+    ? applyQuizCorrectAnswer(card, date)
+    : applyQuizIncorrectAnswer(card, date);
+}
+
+/** 今日以前がクイズの復習日になっているカードだけを抽出する */
+export function getDueQuizCards(
+  cards: VocabCard[],
+  date: string = todayISO(),
+): VocabCard[] {
+  return cards.filter((c) => c.quizNextReviewAt <= date);
 }
 
 /**

@@ -98,6 +98,9 @@ export function AddWordView({ onAdd }: Props) {
       srsLevel: 0,
       nextReviewAt: todayISO(),
       history: [],
+      quizSrsLevel: 0,
+      quizNextReviewAt: todayISO(),
+      quizHistory: [],
     };
 
     onAdd(card);

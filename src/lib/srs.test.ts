@@ -1,14 +1,15 @@
 import { describe, it, expect } from "vitest";
 import type { VocabCard } from "../types/vocab";
 import {
-  applyCorrectAnswer,
-  applyIncorrectAnswer,
+  applyQuizCorrectAnswer,
+  applyQuizIncorrectAnswer,
   applyGrade,
   previewGradeIntervals,
   formatIntervalLabel,
   intervalDaysForLevel,
   addDays,
   getDueCards,
+  getDueQuizCards,
   sortByWeakness,
   masteryRate,
   isMastered,
@@ -29,6 +30,9 @@ function makeCard(overrides: Partial<VocabCard> = {}): VocabCard {
     srsLevel: 0,
     nextReviewAt: "2026-01-01",
     history: [],
+    quizSrsLevel: 0,
+    quizNextReviewAt: "2026-01-01",
+    quizHistory: [],
     ...overrides,
   };
 }
@@ -44,30 +48,36 @@ describe("intervalDaysForLevel", () => {
   });
 });
 
-describe("applyCorrectAnswer", () => {
-  it("increments srsLevel and pushes nextReviewAt forward", () => {
-    const card = makeCard({ srsLevel: 0 });
-    const updated = applyCorrectAnswer(card, "2026-01-01");
-    expect(updated.srsLevel).toBe(1);
-    expect(updated.nextReviewAt).toBe(addDays("2026-01-01", 1));
-    expect(updated.history).toEqual([{ date: "2026-01-01", correct: true }]);
+describe("applyQuizCorrectAnswer", () => {
+  it("increments quizSrsLevel and pushes quizNextReviewAt forward, leaving flashcard fields untouched", () => {
+    const card = makeCard({ srsLevel: 2, nextReviewAt: "2025-12-01", quizSrsLevel: 0 });
+    const updated = applyQuizCorrectAnswer(card, "2026-01-01");
+    expect(updated.quizSrsLevel).toBe(1);
+    expect(updated.quizNextReviewAt).toBe(addDays("2026-01-01", 1));
+    expect(updated.quizHistory).toEqual([{ date: "2026-01-01", correct: true }]);
+    // flashcard-side progress must stay exactly as it was
+    expect(updated.srsLevel).toBe(2);
+    expect(updated.nextReviewAt).toBe("2025-12-01");
+    expect(updated.history).toEqual([]);
   });
 
   it("keeps advancing through the interval table", () => {
-    let card = makeCard({ srsLevel: 3 });
-    card = applyCorrectAnswer(card, "2026-01-01");
-    expect(card.srsLevel).toBe(4);
-    expect(card.nextReviewAt).toBe(addDays("2026-01-01", 14));
+    let card = makeCard({ quizSrsLevel: 3 });
+    card = applyQuizCorrectAnswer(card, "2026-01-01");
+    expect(card.quizSrsLevel).toBe(4);
+    expect(card.quizNextReviewAt).toBe(addDays("2026-01-01", 14));
   });
 });
 
-describe("applyIncorrectAnswer", () => {
-  it("resets srsLevel to 0 and schedules for tomorrow", () => {
-    const card = makeCard({ srsLevel: 4 });
-    const updated = applyIncorrectAnswer(card, "2026-01-01");
-    expect(updated.srsLevel).toBe(0);
-    expect(updated.nextReviewAt).toBe(addDays("2026-01-01", 1));
-    expect(updated.history).toEqual([{ date: "2026-01-01", correct: false }]);
+describe("applyQuizIncorrectAnswer", () => {
+  it("resets quizSrsLevel to 0 and schedules for tomorrow, leaving flashcard fields untouched", () => {
+    const card = makeCard({ srsLevel: 4, nextReviewAt: "2025-12-01", quizSrsLevel: 4 });
+    const updated = applyQuizIncorrectAnswer(card, "2026-01-01");
+    expect(updated.quizSrsLevel).toBe(0);
+    expect(updated.quizNextReviewAt).toBe(addDays("2026-01-01", 1));
+    expect(updated.quizHistory).toEqual([{ date: "2026-01-01", correct: false }]);
+    expect(updated.srsLevel).toBe(4);
+    expect(updated.nextReviewAt).toBe("2025-12-01");
   });
 });
 
@@ -80,6 +90,18 @@ describe("getDueCards", () => {
     ];
     const due = getDueCards(cards, "2026-01-05");
     expect(due.map((c) => c.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("getDueQuizCards", () => {
+  it("only returns cards whose quizNextReviewAt is today or earlier, independent of nextReviewAt", () => {
+    const cards = [
+      // this card's flashcard schedule is far in the future, but it should still be due for quiz
+      makeCard({ id: "a", nextReviewAt: "2099-01-01", quizNextReviewAt: "2026-01-01" }),
+      makeCard({ id: "b", nextReviewAt: "2026-01-01", quizNextReviewAt: "2026-01-10" }),
+    ];
+    const due = getDueQuizCards(cards, "2026-01-05");
+    expect(due.map((c) => c.id)).toEqual(["a"]);
   });
 });
 

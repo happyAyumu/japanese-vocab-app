@@ -27,10 +27,16 @@ export type VocabCard = {
   example: string;
   registeredAt: string; // ISO date
 
-  // 学習進捗（間隔反復で更新）
+  // フラッシュカード（カード画面）の学習進捗（間隔反復で更新）
   srsLevel: number; // 0始まり。正解のたびに増える
   nextReviewAt: string; // ISO date
   history: HistoryEntry[];
+
+  // クイズ画面の学習進捗。フラッシュカードとは完全に別管理
+  // （カード画面を終わらせてもクイズの出題対象が0件になったりしない）
+  quizSrsLevel: number;
+  quizNextReviewAt: string; // ISO date
+  quizHistory: HistoryEntry[];
 };
 
 export type SortMode = "registered" | "aiueo" | "weak";

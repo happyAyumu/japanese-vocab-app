@@ -21,6 +21,9 @@ function makeCard(overrides: Partial<VocabCard>): VocabCard {
     srsLevel: 0,
     nextReviewAt: "2026-01-01",
     history: [],
+    quizSrsLevel: 0,
+    quizNextReviewAt: "2026-01-01",
+    quizHistory: [],
     ...overrides,
   };
 }

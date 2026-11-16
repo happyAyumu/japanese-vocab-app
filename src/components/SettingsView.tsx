@@ -21,6 +21,7 @@ export function SettingsView({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState("");
+  const [sortMessage, setSortMessage] = useState("");
 
   function handleExport() {
     const json = exportCardsAsJSON(cards);
@@ -74,7 +75,10 @@ export function SettingsView({
           ).map(({ mode, label }) => (
             <button
               key={mode}
-              onClick={() => onSortModeChange(mode)}
+              onClick={() => {
+                onSortModeChange(mode);
+                setSortMessage(`並び順を「${label}」に変更しました（カード画面に反映されます）`);
+              }}
               className={`rounded-full border px-4 py-2 text-sm transition active:scale-95 ${
                 sortMode === mode
                   ? "border-vermillion bg-vermillion text-white"
@@ -85,6 +89,9 @@ export function SettingsView({
             </button>
           ))}
         </div>
+        {sortMessage && (
+          <p className="mt-2 text-sm text-good">{sortMessage}</p>
+        )}
       </section>
 
       <section>
