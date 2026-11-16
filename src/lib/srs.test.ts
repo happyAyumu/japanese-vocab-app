@@ -16,6 +16,8 @@ import {
   computeStreak,
   levelDistribution,
   dailyStudyCounts,
+  monthlyStudyCounts,
+  shiftYearMonth,
 } from "./srs";
 
 const NOW = "2026-01-01T00:00:00.000Z";
@@ -316,5 +318,54 @@ describe("dailyStudyCounts", () => {
 
   it("returns an empty array when nothing has been studied", () => {
     expect(dailyStudyCounts([makeCard({})])).toEqual([]);
+  });
+});
+
+describe("monthlyStudyCounts", () => {
+  it("fills every day of the month with 0, including unstudied and future days", () => {
+    const cards = [
+      makeCard({
+        history: [{ date: "2026-02-03", correct: true }],
+        quizHistory: [{ date: "2026-02-03", correct: true }],
+      }),
+    ];
+    const result = monthlyStudyCounts(cards, "2026-02");
+    expect(result).toHaveLength(28); // 2026 is not a leap year
+    expect(result[0]).toEqual({ date: "2026-02-01", count: 0 });
+    expect(result[2]).toEqual({ date: "2026-02-03", count: 2 });
+    expect(result[27]).toEqual({ date: "2026-02-28", count: 0 });
+  });
+
+  it("has a fixed length that does not grow as more days accumulate data", () => {
+    const manyDaysOfHistory = Array.from({ length: 20 }, (_, i) => ({
+      date: `2026-03-${String(i + 1).padStart(2, "0")}`,
+      correct: true,
+    }));
+    const cards = [makeCard({ history: manyDaysOfHistory })];
+    expect(monthlyStudyCounts(cards, "2026-03")).toHaveLength(31);
+  });
+
+  it("handles a month with no studied days at all", () => {
+    const result = monthlyStudyCounts([makeCard({})], "2026-04");
+    expect(result).toHaveLength(30);
+    expect(result.every((d) => d.count === 0)).toBe(true);
+  });
+});
+
+describe("shiftYearMonth", () => {
+  it("moves forward within the same year", () => {
+    expect(shiftYearMonth("2026-03", 1)).toBe("2026-04");
+  });
+
+  it("moves backward within the same year", () => {
+    expect(shiftYearMonth("2026-03", -1)).toBe("2026-02");
+  });
+
+  it("rolls over into the next year", () => {
+    expect(shiftYearMonth("2026-12", 1)).toBe("2027-01");
+  });
+
+  it("rolls back into the previous year", () => {
+    expect(shiftYearMonth("2026-01", -1)).toBe("2025-12");
   });
 });

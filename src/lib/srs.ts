@@ -264,6 +264,43 @@ export function dailyStudyCounts(cards: VocabCard[]): DailyStudyCount[] {
     .map(([date, count]) => ({ date, count }));
 }
 
+/** 指定した年月（"YYYY-MM"）の日数を返す */
+function daysInMonth(yearMonth: string): number {
+  const [year, month] = yearMonth.split("-").map(Number);
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+/** 今月の"YYYY-MM"文字列 */
+export function currentYearMonth(): string {
+  return todayISO().slice(0, 7);
+}
+
+/** "YYYY-MM"をdelta ヶ月分ずらした"YYYY-MM"文字列を返す（月をまたいでも正しく繰り上がる） */
+export function shiftYearMonth(yearMonth: string, delta: number): string {
+  const [year, month] = yearMonth.split("-").map(Number);
+  const d = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/**
+ * 指定した月（"YYYY-MM"）の全日分の学習量を返す。
+ * 学習していない日・まだ訪れていない日（未来の日付）も count:0 として含むため、
+ * グラフの横軸の本数は常にその月の日数（28〜31本）で固定される。
+ */
+export function monthlyStudyCounts(
+  cards: VocabCard[],
+  yearMonth: string = currentYearMonth(),
+): DailyStudyCount[] {
+  const countsByDate = new Map(dailyStudyCounts(cards).map((d) => [d.date, d.count]));
+  const totalDays = daysInMonth(yearMonth);
+  const result: DailyStudyCount[] = [];
+  for (let day = 1; day <= totalDays; day++) {
+    const date = `${yearMonth}-${String(day).padStart(2, "0")}`;
+    result.push({ date, count: countsByDate.get(date) ?? 0 });
+  }
+  return result;
+}
+
 export type LevelBucket = {
   label: string;
   count: number;

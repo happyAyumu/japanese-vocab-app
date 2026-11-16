@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -15,15 +15,22 @@ import type { VocabCard } from "../types/vocab";
 import {
   MASTERY_LEVEL_THRESHOLD,
   computeStreak,
-  dailyStudyCounts,
+  currentYearMonth,
   isMastered,
   levelDistribution,
   masteryRate,
+  monthlyStudyCounts,
+  shiftYearMonth,
 } from "../lib/srs";
 
 type Props = {
   cards: VocabCard[];
 };
+
+function formatYearMonthLabel(yearMonth: string): string {
+  const [year, month] = yearMonth.split("-");
+  return `${year}年${Number(month)}月`;
+}
 
 export function ProgressView({ cards }: Props) {
   const rate = masteryRate(cards);
@@ -31,7 +38,13 @@ export function ProgressView({ cards }: Props) {
   const streak = useMemo(() => computeStreak(cards), [cards]);
   const buckets = useMemo(() => levelDistribution(cards), [cards]);
 
-  const studyCounts = useMemo(() => dailyStudyCounts(cards), [cards]);
+  const [yearMonth, setYearMonth] = useState(currentYearMonth());
+  const monthlyCounts = useMemo(() => monthlyStudyCounts(cards, yearMonth), [cards, yearMonth]);
+  const chartData = useMemo(
+    () => monthlyCounts.map((d) => ({ ...d, day: Number(d.date.slice(8, 10)) })),
+    [monthlyCounts],
+  );
+  const tickInterval = Math.max(0, Math.ceil(chartData.length / 10) - 1);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 p-4">
@@ -104,29 +117,49 @@ export function ProgressView({ cards }: Props) {
       </div>
 
       <div>
-        <h2 className="mb-2 text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
-          日別の学習量
-        </h2>
-        <p className="mb-2 text-xs text-sumi-sub dark:text-sumi-subDark">
-          フラッシュカードの評価＋クイズの回答の合計回数（1日ごと）
-        </p>
-        {studyCounts.length === 0 ? (
-          <p className="text-sm text-sumi-sub dark:text-sumi-subDark">
-            まだ学習記録がありません。カードを評価するかクイズに答えると、ここにグラフが表示されます。
-          </p>
-        ) : (
-          <div className="h-56 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={studyCounts}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e6ddd0" />
-                <XAxis dataKey="date" fontSize={11} stroke="#7a7266" />
-                <YAxis allowDecimals={false} fontSize={11} stroke="#7a7266" />
-                <Tooltip />
-                <Bar dataKey="count" fill="#a8562f" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-sumi-ink dark:text-sumi-inkDark">
+            月間の学習量
+          </h2>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setYearMonth((ym) => shiftYearMonth(ym, -1))}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-washi-border bg-washi-card text-sm text-sumi-ink active:scale-95 dark:border-washi-borderDark dark:bg-washi-cardDark dark:text-sumi-inkDark"
+            >
+              ←
+            </button>
+            <span className="min-w-[5.5rem] text-center text-sm text-sumi-ink dark:text-sumi-inkDark">
+              {formatYearMonthLabel(yearMonth)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setYearMonth((ym) => shiftYearMonth(ym, 1))}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-washi-border bg-washi-card text-sm text-sumi-ink active:scale-95 dark:border-washi-borderDark dark:bg-washi-cardDark dark:text-sumi-inkDark"
+            >
+              →
+            </button>
           </div>
-        )}
+        </div>
+        <p className="mb-2 text-xs text-sumi-sub dark:text-sumi-subDark">
+          フラッシュカードの評価＋クイズの回答の合計回数（1日ごと、月の全日を表示）
+        </p>
+        <div className="h-56 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e6ddd0" />
+              <XAxis
+                dataKey="day"
+                fontSize={11}
+                stroke="#7a7266"
+                interval={tickInterval}
+              />
+              <YAxis allowDecimals={false} fontSize={11} stroke="#7a7266" />
+              <Tooltip labelFormatter={(_, payload) => payload?.[0]?.payload?.date ?? ""} />
+              <Bar dataKey="count" fill="#a8562f" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
