@@ -56,6 +56,16 @@ export function DeckView({ cards, dueCardIds, sortMode, onGrade }: Props) {
     setIdx(0);
   }, [filterMode, shuffleSeed, cards.length]);
 
+  // 「今日の復習」「苦手のみ」は評価するたびに対象から外れて一覧が縮むことがある。
+  // そのときidxを進めてしまうと、配列が1つ詰まった上にさらに1つ飛ばすことになり、
+  // カードを読み飛ばした末にidxが配列範囲外になってしまう（起きていたバグ）。
+  // 念のため、範囲外になったら安全に0へ戻す。
+  useEffect(() => {
+    if (idx >= shuffled.length) {
+      setIdx(0);
+    }
+  }, [idx, shuffled.length]);
+
   const current = shuffled[idx];
 
   function go(delta: number) {
@@ -66,7 +76,12 @@ export function DeckView({ cards, dueCardIds, sortMode, onGrade }: Props) {
   function handleGrade(grade: Grade) {
     if (!current) return;
     onGrade(current.id, grade);
-    go(1);
+    // 「すべて」表示は評価しても一覧の件数が変わらないので、次のカードへ進める。
+    // 「今日の復習」「苦手のみ」は評価によって対象から外れた分、配列が詰まって
+    // 同じidxがそのまま次のカードを指すようになるため、ここで進めると1枚飛ばしてしまう。
+    if (filterMode === "all") {
+      go(1);
+    }
   }
 
   const preview = current ? previewGradeIntervals(current) : null;
